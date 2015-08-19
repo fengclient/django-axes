@@ -192,6 +192,8 @@ def is_user_lockable(request):
         kwargs = {
             field: request.POST.get(USERNAME_FORM_FIELD)
         }
+        if not kwargs[field]:
+            return False
         user = User.objects.get(**kwargs)
     except User.DoesNotExist:
         # not a valid user
@@ -231,9 +233,10 @@ def _get_user_attempts(request):
         )
     else:
         attempts = AccessAttempt.objects.filter(
-            ip_address=ip, username=username, trusted=True
+            ip_address=ip, username=username
         )
 
+    '''
     if not attempts:
         params = {'ip_address': ip, 'trusted': False}
         if USE_USER_AGENT:
@@ -244,6 +247,7 @@ def _get_user_attempts(request):
             del params['ip_address']
             params['username'] = username
             attempts |= AccessAttempt.objects.filter(**params)
+    '''
 
     return attempts
 
@@ -456,7 +460,7 @@ def create_new_failure_records(request, failures):
     params = {
         'user_agent': ua,
         'ip_address': ip,
-        'username': None,
+        'username': username,
         'get_data': query2str(request.GET.items()),
         'post_data': query2str(request.POST.items()),
         'http_accept': request.META.get('HTTP_ACCEPT', '<unknown>'),
@@ -468,11 +472,13 @@ def create_new_failure_records(request, failures):
     AccessAttempt.objects.create(**params)
 
     # record failed attempt on this username from untrusted IP
+    '''
     params.update({
         'ip_address': None,
         'username': username,
     })
     AccessAttempt.objects.create(**params)
+    '''
 
     log.info('AXES: New login failure by %s. Creating access record.' % (ip,))
 
